@@ -1,0 +1,6 @@
+severity_threshold: "HIGH,CRITICAL"
+fail_on_severity: "CRITICAL"
+report_format: "html"
+slack_channel: "#security-alerts"
+rescan_interval_days: 7
+whitelist_path: "exceptions/whitelist.json"
