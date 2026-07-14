@@ -11,8 +11,9 @@ __pycache__/
 # Environment variables
 .env
 
-# Reports
-reports/output/
+# Generated reports
+reports/*.txt
+reports/*.html
 
 # OS files
 .DS_Store
