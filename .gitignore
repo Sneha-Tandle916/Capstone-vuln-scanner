@@ -18,3 +18,7 @@ reports/*.html
 # OS files
 .DS_Store
 Thumbs.db
+# Generated scan results
+test_result.json
+gate_pass_test.json
+config-pass.yaml

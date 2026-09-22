@@ -24,9 +24,11 @@ def scan_image(image_name: str, severity: str = "HIGH,CRITICAL") -> dict:
 
     logger.info(f"Scanning image: {image_name}")
     result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True
+    	cmd,
+    	capture_output=True,
+    	text=True,
+    	encoding="utf-8",
+    	errors="replace"
     )
     if result.returncode not in (0, 1):
         raise RuntimeError(

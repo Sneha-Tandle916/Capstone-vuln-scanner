@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'python3 -m pip install -r requirements.txt'
+            }
+        }
+
+        stage('Install Trivy') {
+            steps {
+                sh '''
+                    if ! command -v trivy >/dev/null 2>&1; then
+                        wget -qO- https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                    fi
+                '''
+            }
+        }
+
+        stage('Build Scanner Image') {
+            steps {
+                sh 'docker build -t vuln-scanner:local .'
+            }
+        }
+
+        stage('Run Vulnerability Scan') {
+            steps {
+                script {
+                    def scanStatus = sh(
+                        script: 'python3 -m scanner.scan python:3.8 --output-json scan_result.json',
+                        returnStatus: true
+                    )
+
+                    echo "Scanner exit code: ${scanStatus}"
+                }
+            }
+        }
+
+        stage('Security Gate') {
+            steps {
+                script {
+                    def gateStatus = sh(
+                        script: 'python3 scanner/gate_check.py scan_result.json',
+                        returnStatus: true
+                    )
+
+                    if (gateStatus != 0) {
+                        error("Security gate failed with exit code ${gateStatus}")
+                    }
+                }
+            }
+        }
+
+        stage('Archive Scan Result') {
+            steps {
+                archiveArtifacts artifacts: 'scan_result.json', allowEmptyArchive: false
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Jenkins pipeline completed.'
+        }
+    }
+}
