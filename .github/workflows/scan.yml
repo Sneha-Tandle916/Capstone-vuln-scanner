@@ -41,7 +41,7 @@ jobs:
       - name: Run vulnerability scan
         continue-on-error: true
         run: |
-          python -m scanner.scan python:3.8 --output-json scan_result.json
+          python -m scanner.scan vuln-scanner:local --output-json scan_result.json
 
       - name: Upload scan result
         if: always()
