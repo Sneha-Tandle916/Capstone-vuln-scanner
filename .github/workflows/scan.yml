@@ -1,4 +1,4 @@
-name: Vulnerability Scan
+name: Security Scan
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - develop
   pull_request:
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: "0 0 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -34,6 +34,10 @@ jobs:
           sudo apt-get install -y wget
           wget -qO- https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
+      - name: Build scanner Docker image
+        run: |
+          docker build -t vuln-scanner:local .
+
       - name: Run vulnerability scan
         continue-on-error: true
         run: |
@@ -43,7 +47,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vulnerability-scan-result
+          name: scan-result
           path: scan_result.json
 
       - name: Check security gate
