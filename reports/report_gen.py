@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
@@ -33,25 +33,63 @@ def generate_summary(vulnerabilities: list) -> str:
     return "\n".join(summary)
 
 
-def save_report(report: str, filename: str = "reports/scan_report.txt") -> None:
+def summarize_vulnerabilities(vulnerabilities: list) -> dict:
     """
-    Save the generated report to a text file.
+    Count vulnerabilities by severity.
+    """
+
+    summary = {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "UNKNOWN": 0,
+    }
+
+    for vuln in vulnerabilities:
+
+        severity = vuln.get("severity", "UNKNOWN").upper()
+
+        if severity in summary:
+            summary[severity] += 1
+        else:
+            summary["UNKNOWN"] += 1
+
+    return summary
+
+
+def save_report(
+    report: str,
+    filename: str = "reports/scan_report.txt"
+) -> None:
+    """
+    Save the generated text report.
     """
 
     output_path = Path(filename)
 
-    # Create directory if it doesn't exist
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    with open(output_path, "w", encoding="utf-8") as file:
+    with open(
+        output_path,
+        "w",
+        encoding="utf-8"
+    ) as file:
         file.write(report)
 
-    logger.info(f"Report saved to {output_path}")
+    logger.info(
+        f"Report saved to {output_path}"
+    )
 
 
-def generate_html_report(vulnerabilities: list,
-                         template_dir: str = "templates",
-                         template_name: str = "report_template.html") -> str:
+def generate_html_report(
+    vulnerabilities: list,
+    template_dir: str = "templates",
+    template_name: str = "report_template.html"
+) -> str:
     """
     Generate an HTML report using a Jinja2 template.
     """
@@ -60,27 +98,45 @@ def generate_html_report(vulnerabilities: list,
         loader=FileSystemLoader(template_dir)
     )
 
-    template = env.get_template(template_name)
+    template = env.get_template(
+        template_name
+    )
+
+    summary = summarize_vulnerabilities(
+        vulnerabilities
+    )
 
     html = template.render(
         total=len(vulnerabilities),
+        summary=summary,
         vulnerabilities=vulnerabilities
     )
 
     return html
 
 
-def save_html_report(html: str,
-                     filename: str = "reports/scan_report.html") -> None:
+def save_html_report(
+    html: str,
+    filename: str = "reports/scan_report.html"
+) -> None:
     """
     Save the generated HTML report.
     """
 
     output_path = Path(filename)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    with open(output_path, "w", encoding="utf-8") as file:
+    with open(
+        output_path,
+        "w",
+        encoding="utf-8"
+    ) as file:
         file.write(html)
 
-    logger.info(f"HTML report saved to {output_path}")
+    logger.info(
+        f"HTML report saved to {output_path}"
+    )

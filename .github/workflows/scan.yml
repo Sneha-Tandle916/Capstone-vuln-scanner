@@ -53,3 +53,10 @@ jobs:
       - name: Check security gate
         run: |
           python scanner/gate_check.py scan_result.json
+
+      - name: Notify Slack on gate failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python notifications/notifier.py scan_result.json --channel slack

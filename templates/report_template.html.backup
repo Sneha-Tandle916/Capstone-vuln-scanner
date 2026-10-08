@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vulnerability Scan Report</title>
+
+    <style>
+
+        body{
+            font-family: Arial, sans-serif;
+            margin:40px;
+        }
+
+        h1{
+            color:#c0392b;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        th,td{
+            border:1px solid black;
+            padding:8px;
+            text-align:left;
+        }
+
+        th{
+            background:#eeeeee;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<h1>Vulnerability Scan Report</h1>
+
+<p>Total Vulnerabilities: {{ total }}</p>
+
+<table>
+
+<tr>
+    <th>CVE</th>
+    <th>Package</th>
+    <th>Severity</th>
+    <th>Installed</th>
+    <th>Fixed</th>
+</tr>
+
+{% for vuln in vulnerabilities %}
+
+<tr>
+
+<td>{{ vuln.id }}</td>
+<td>{{ vuln.package }}</td>
+<td>{{ vuln.severity }}</td>
+<td>{{ vuln.installed_version }}</td>
+<td>{{ vuln.fixed_version }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</body>
+
+</html>

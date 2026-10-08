@@ -1,13 +1,19 @@
-from scanner.trivy_runner import scan_image
+﻿import json
 from scanner.cve_parser import extract_vulnerabilities
-from reports.report_gen import generate_summary, save_report
+from reports.report_gen import generate_html_report, save_html_report
 
-scan_result = scan_image("alpine:3.19")
+with open("test_result.json", "r", encoding="utf-8") as file:
+    scan_result = json.load(file)
 
 vulnerabilities = extract_vulnerabilities(scan_result)
 
-summary = generate_summary(vulnerabilities)
+print(f"Vulnerabilities loaded: {len(vulnerabilities)}")
 
-print(summary)
+html = generate_html_report(vulnerabilities)
 
-save_report(summary)
+save_html_report(
+    html,
+    "reports/sprint3_test_report.html"
+)
+
+print("HTML report generated successfully.")

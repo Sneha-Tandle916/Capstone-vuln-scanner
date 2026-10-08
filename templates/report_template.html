@@ -1,68 +1,201 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Vulnerability Scan Report</title>
 
     <style>
-
-        body{
+        body {
             font-family: Arial, sans-serif;
-            margin:40px;
+            margin: 40px;
+            background: #f5f6fa;
+            color: #2c3e50;
         }
 
-        h1{
-            color:#c0392b;
+        h1 {
+            color: #c0392b;
+            margin-bottom: 5px;
         }
 
-        table{
-            width:100%;
-            border-collapse:collapse;
+        .summary {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
-        th,td{
-            border:1px solid black;
-            padding:8px;
-            text-align:left;
+        .summary-grid {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
-        th{
-            background:#eeeeee;
+        .summary-card {
+            padding: 15px 20px;
+            border-radius: 6px;
+            min-width: 120px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
         }
 
+        .critical {
+            background: #c0392b;
+        }
+
+        .high {
+            background: #e67e22;
+        }
+
+        .medium {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .low {
+            background: #27ae60;
+        }
+
+        .unknown {
+            background: #7f8c8d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #34495e;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .severity {
+            font-weight: bold;
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+
+        .severity-critical {
+            background: #c0392b;
+            color: white;
+        }
+
+        .severity-high {
+            background: #e67e22;
+            color: white;
+        }
+
+        .severity-medium {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .severity-low {
+            background: #27ae60;
+            color: white;
+        }
+
+        .severity-unknown {
+            background: #7f8c8d;
+            color: white;
+        }
     </style>
-
 </head>
 
 <body>
 
 <h1>Vulnerability Scan Report</h1>
 
-<p>Total Vulnerabilities: {{ total }}</p>
+<div class="summary">
+    <h2>Scan Summary</h2>
+
+    <p>
+        <strong>Total Vulnerabilities:</strong>
+        {{ total }}
+    </p>
+
+    <div class="summary-grid">
+
+        <div class="summary-card critical">
+            CRITICAL<br>
+            {{ summary.CRITICAL }}
+        </div>
+
+        <div class="summary-card high">
+            HIGH<br>
+            {{ summary.HIGH }}
+        </div>
+
+        <div class="summary-card medium">
+            MEDIUM<br>
+            {{ summary.MEDIUM }}
+        </div>
+
+        <div class="summary-card low">
+            LOW<br>
+            {{ summary.LOW }}
+        </div>
+
+        <div class="summary-card unknown">
+            UNKNOWN<br>
+            {{ summary.UNKNOWN }}
+        </div>
+
+    </div>
+</div>
+
+<h2>Vulnerability Details</h2>
 
 <table>
 
-<tr>
-    <th>CVE</th>
-    <th>Package</th>
-    <th>Severity</th>
-    <th>Installed</th>
-    <th>Fixed</th>
-</tr>
+    <tr>
+        <th>CVE</th>
+        <th>Package</th>
+        <th>Severity</th>
+        <th>Installed Version</th>
+        <th>Fixed Version</th>
+        <th>Title</th>
+    </tr>
 
-{% for vuln in vulnerabilities %}
+    {% for vuln in vulnerabilities %}
 
-<tr>
+    <tr>
+        <td>{{ vuln.id }}</td>
 
-<td>{{ vuln.id }}</td>
-<td>{{ vuln.package }}</td>
-<td>{{ vuln.severity }}</td>
-<td>{{ vuln.installed_version }}</td>
-<td>{{ vuln.fixed_version }}</td>
+        <td>{{ vuln.package }}</td>
 
-</tr>
+        <td>
+            <span class="severity severity-{{ vuln.severity|lower }}">
+                {{ vuln.severity }}
+            </span>
+        </td>
 
-{% endfor %}
+        <td>{{ vuln.installed_version }}</td>
+
+        <td>{{ vuln.fixed_version }}</td>
+
+        <td>{{ vuln.title }}</td>
+    </tr>
+
+    {% endfor %}
 
 </table>
 
