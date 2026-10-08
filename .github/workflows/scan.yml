@@ -54,11 +54,6 @@ jobs:
         run: |
           python scanner/gate_check.py scan_result.json
 
-      - name: TEMPORARY Slack notification test
-        run: |
-          echo "Forcing a failure to test Slack notification"
-          exit 1
-
       - name: Notify Slack on gate failure
         if: failure()
         env:
