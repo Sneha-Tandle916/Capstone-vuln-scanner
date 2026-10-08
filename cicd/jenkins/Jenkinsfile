@@ -66,6 +66,14 @@ pipeline {
     }
 
     post {
+        failure {
+            withCredentials([
+                string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')
+            ]) {
+                sh 'python3 notifications/notifier.py scan_result.json --channel slack'
+            }
+        }
+
         always {
             echo 'Jenkins pipeline completed.'
         }
