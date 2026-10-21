@@ -62,13 +62,6 @@ pipeline {
             }
         }
 
-        stage('Archive Scan Result') {
-            steps {
-                archiveArtifacts artifacts: 'scan_result.json', allowEmptyArchive: false
-            }
-        }
-    }
-
     post {
         failure {
             withCredentials([
@@ -79,6 +72,7 @@ pipeline {
         }
 
         always {
+            archiveArtifacts artifacts: 'scan_result.json', allowEmptyArchive: true
             echo 'Jenkins pipeline completed.'
         }
     }
