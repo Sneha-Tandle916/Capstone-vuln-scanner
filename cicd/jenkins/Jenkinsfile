@@ -61,13 +61,20 @@ pipeline {
                 }
             }
         }
+    }
 
     post {
         failure {
             withCredentials([
                 string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')
             ]) {
-                sh '.venv/bin/python notifications/notifier.py scan_result.json --channel slack'
+                sh '''
+                    if [ -f scan_result.json ]; then
+                        .venv/bin/python notifications/notifier.py scan_result.json --channel slack
+                    else
+                        echo "Scan result not available; skipping Slack scan notification."
+                    fi
+                '''
             }
         }
 
