@@ -372,6 +372,4 @@ The Capstone Vulnerability Scanner demonstrates how container image vulnerabilit
 
 By combining automated scanning, severity-based security gates, HTML reports, Slack notifications, and artifact archiving, the project provides a foundation for identifying and managing container security risks during software delivery.
 
-## Repository
-
-GitHub: https://github.com/Sneha-Tandle916/Capstone-vuln-scanner
+ 
