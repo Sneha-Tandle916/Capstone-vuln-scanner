@@ -38,7 +38,8 @@ pipeline {
             steps {
                 script {
                     def scanStatus = sh(
-                        script: '.venv/bin/python -m scanner.scan python:3.8 --output-json scan_result.json',
+                        script: '.venv/bin/python -m scanner.scan python:3.11-slim --output-json scan_result.json',
+                        script: 'python3 -m scanner.scan python:3.11-slim --output-json scan_result.json',
                         returnStatus: true
                     )
 
