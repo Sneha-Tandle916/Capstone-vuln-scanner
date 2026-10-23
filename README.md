@@ -509,3 +509,13 @@ Verify the Jenkins credential, webhook configuration, and network connectivity. 
 - Improve dashboard filtering and historical visualizations.
 - Add tests for exporter metrics and security-gate edge cases.
 - Evaluate image updates and dependency upgrades to reduce vulnerability findings.
+
+## Repository
+
+GitHub: https://github.com/Sneha-Tandle916/Capstone-vuln-scanner
+
+## Conclusion
+
+This capstone demonstrates a practical DevSecOps workflow combining container vulnerability scanning, security-gate enforcement, HTML reporting, Slack notifications, CI/CD automation, and Prometheus–Grafana monitoring.
+
+The monitoring integration was validated against a Trivy scan report, and the Sprint 4 implementation was committed and pushed to GitHub.
