@@ -6,6 +6,40 @@ from scanner.trivy_runner import scan_image
 from scanner.cve_parser import extract_vulnerabilities
 
 
+import time
+from functools import wraps
+
+
+def retry(max_attempts=3, delay=5):
+    """Retry a function on failure, then re-raise the last exception."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts:
+                        raise
+
+                    print(
+                        f"Attempt {attempt} failed: {e}. "
+                        f"Retrying in {delay} seconds..."
+                    )
+                    time.sleep(delay)
+
+        return wrapper
+
+    return decorator
+
+
+@retry(max_attempts=3, delay=5)
+def run_scan_with_retry(image_name, config, quiet=False):
+    return run_scan(image_name, config, quiet=quiet)
+
+
+
 def load_config(path="config.yaml"):
     """
     Load configuration from config.yaml.
@@ -104,10 +138,7 @@ def main():
 
     args = parser.parse_args()
 
-    scan_result, vulnerabilities = run_scan(
-        args.image,
-        severity=args.severity
-    )
+    result = run_scan_with_retry(args.image, config, quiet=args.quiet)
 
     summary = summarize_vulnerabilities(vulnerabilities)
 

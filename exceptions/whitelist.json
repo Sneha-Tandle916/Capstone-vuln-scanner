@@ -1,0 +1,11 @@
+
+{
+  "approved_cves": [
+    {
+      "cve_id": "CVE-REPLACE-WITH-REAL-ID",
+      "reason": "Temporary test exception for Sprint 5 validation",
+      "approved_by": "Sprint 5 test reviewer",
+      "expiry": "2020-01-01"
+    }
+  ]
+}

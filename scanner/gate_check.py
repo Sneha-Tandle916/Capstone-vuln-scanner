@@ -2,6 +2,7 @@ import argparse
 import json
 import sys
 import yaml
+from exceptions import load_whitelist, apply_exceptions
 
 
 SEVERITY_ORDER = [
@@ -83,39 +84,65 @@ def format_vuln_table(failing):
         )
 
 
-def check_gate(result_path, config_path="config.yaml"):
-    """
-    Check the scan result against fail_on_severity.
 
-    Exit codes:
-        0 = PASS
-        1 = BLOCKED
-        2 = GATE/CONFIGURATION ERROR
-    """
+def check_gate(result_path: str, config_path: str = "config.yaml"):
     result = load_result(result_path)
     threshold = load_threshold(config_path)
     blocked = derive_blocked_severities(threshold)
+    image = result.get("image", "unknown image")
+    vulns = result.get("vulnerabilities", [])
 
-    vulnerabilities = get_vulnerabilities(result)
+    # Read the whitelist path from config.yaml.
+    whitelist_path = "exceptions/whitelist.json"
 
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+            whitelist_path = config.get(
+                "whitelist_path", whitelist_path
+            )
+    except OSError as e:
+        print(f"WARNING: Could not read config: {e}")
+
+    whitelist = load_whitelist(whitelist_path)
+    active_vulns, excepted_vulns = apply_exceptions(
+        vulns, whitelist
+    )
+
+    # Only active findings determine the gate decision.
     failing = [
-        vulnerability
-        for vulnerability in vulnerabilities
-        if str(
-            vulnerability.get("Severity", "UNKNOWN")
-        ).upper() in blocked
+        v for v in active_vulns
+        if v.get("severity") in blocked
     ]
+
+    print(f"\n{'=' * 64}")
+    print(" VULNERABILITY GATE CHECK")
+    print(f" Image     : {image}")
+    print(f" Threshold : {threshold}+")
+    print(f" Active    : {len(active_vulns)} findings")
+    print(f" Excepted  : {len(excepted_vulns)} findings (whitelisted)")
+    print(f"{'=' * 64}\n")
+
+    # Keep accepted risks visible in the CI log.
+    for v in excepted_vulns[:10]:
+        print(
+            f" [accepted] {v.get('severity')} "
+            f"{v.get('cve_id')} in {v.get('package')}"
+        )
+
+    if excepted_vulns:
+        print()
 
     if failing:
         print(
             f"BUILD BLOCKED - {len(failing)} "
-            f"{threshold}+ vulnerabilities found"
+            f"{threshold}+ active findings:\n"
         )
-        format_vuln_table(failing)
-        return 1
+        print(format_vuln_table(failing))
+        sys.exit(1)
 
-    print(f"GATE PASSED   no {threshold}+ vulnerabilities")
-    return 0
+    print(f"GATE PASSED - no active {threshold}+ findings in {image}")
+    sys.exit(0)
 
 
 def main():
