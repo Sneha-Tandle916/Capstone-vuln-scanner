@@ -51,8 +51,7 @@ jobs:
           path: scan_result.json
 
       - name: Check security gate
-        run: |
-          python scanner/gate_check.py scan_result.json
+  	run: python -m scanner.gate_check scan_result.json
 
       - name: Notify Slack on gate failure
         if: failure()
