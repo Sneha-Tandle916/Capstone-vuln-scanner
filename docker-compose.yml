@@ -1,0 +1,46 @@
+services:
+  vuln-scanner:
+    build: .
+    container_name: vuln-scanner-exporter
+    entrypoint: ["python", "dashboard/metrics_exporter.py"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./scan_results:/data:ro
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      DATA_DIR: /data
+      CONFIG_FILE: /app/config.yaml
+      POLL_SECONDS: "15"
+      PORT: "8000"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vuln-scanner-prometheus
+    volumes:
+      - ./dashboard/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - vuln-scanner
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vuln-scanner-grafana
+    volumes:
+      - ./dashboard/grafana_config:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

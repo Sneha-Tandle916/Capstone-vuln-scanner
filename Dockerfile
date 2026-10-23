@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY scanner/ scanner/
+COPY dashboard/ dashboard/
 COPY config.yaml .
 
 ENTRYPOINT ["python", "-m", "scanner.scan"]

@@ -22,3 +22,8 @@ Thumbs.db
 test_result.json
 gate_pass_test.json
 config-pass.yaml
+
+# Sprint 4 generated scan outputs
+scan_result.json
+scan_results/
+gate_output.txt
