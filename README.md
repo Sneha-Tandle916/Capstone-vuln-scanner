@@ -1,36 +1,101 @@
 # Capstone Vulnerability Scanner
 
+A DevSecOps project that scans container images for security vulnerabilities using **Trivy**, generates HTML reports, enforces security gates, sends Slack notifications, and visualizes vulnerability metrics through **Prometheus and Grafana**.
+
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Objectives](#objectives)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Setup and Installation](#setup-and-installation)
+- [Run a Vulnerability Scan](#run-a-vulnerability-scan)
+- [Security Gate](#security-gate)
+- [Generate HTML Reports](#generate-html-reports)
+- [Slack Notifications](#slack-notifications)
+- [Prometheus and Grafana Monitoring](#prometheus-and-grafana-monitoring)
+- [Jenkins CI/CD Pipeline](#jenkins-cicd-pipeline)
+- [GitHub Actions](#github-actions)
+- [Latest Scan Results](#latest-scan-results)
+- [Troubleshooting](#troubleshooting)
+- [Future Improvements](#future-improvements)
+
 ## Project Overview
 
-The **Capstone Vulnerability Scanner** is an automated container image security scanning solution built using Trivy, Python, Docker, Jenkins, and GitHub Actions.
+The Capstone Vulnerability Scanner automates container image vulnerability detection and integrates security checks into a DevSecOps workflow.
 
-The project scans container images for known security vulnerabilities, classifies findings by severity, enforces configurable security gates, generates vulnerability reports, and sends Slack notifications when a security gate blocks a build.
+It uses Trivy to identify known vulnerabilities in container images. Scan results can be evaluated by a configurable security gate, presented in HTML reports, and monitored using Prometheus and Grafana. Slack notifications provide feedback about scan execution.
 
-The goal is to integrate vulnerability detection into the CI/CD pipeline so that potentially vulnerable container images can be identified before deployment.
+The project demonstrates how security scanning and monitoring can be integrated into a CI/CD pipeline.
 
 ## Objectives
 
 - Automate container image vulnerability scanning.
-- Identify and classify vulnerabilities by severity.
-- Enforce security policies through configurable security gates.
-- Generate detailed HTML vulnerability reports.
-- Integrate scanning into Jenkins and GitHub Actions.
-- Send Slack notifications when security checks fail.
-- Archive scan results for investigation and auditing.
+- Identify vulnerabilities by severity.
+- Apply configurable security-gate policies.
+- Generate readable HTML vulnerability reports.
+- Send scan notifications through Slack.
+- Integrate scanning with Jenkins and GitHub Actions.
+- Expose scan metrics to Prometheus.
+- Visualize vulnerability counts and scan status in Grafana.
+- Run the monitoring services together using Docker Compose.
+
+## Architecture
+
+```text
+Developer
+    |
+    v
+GitHub Repository
+    |
+    +----------------------+
+    |                      |
+    v                      v
+GitHub Actions           Jenkins
+    |                      |
+    +----------+-----------+
+               |
+               v
+        Trivy Image Scan
+               |
+               v
+       Scan Result JSON
+               |
+       +-------+--------+
+       |       |        |
+       v       v        v
+   Security   HTML     Slack
+     Gate    Report   Notification
+               |
+               v
+       Metrics Exporter
+               |
+               v
+          Prometheus
+               |
+               v
+            Grafana
+```
 
 ## Technology Stack
 
 | Technology | Purpose |
 |---|---|
-| Python | Scanner orchestration, parsing, reporting, and notifications |
+| Python | Scanner integration, report generation, and metrics exporter |
 | Trivy | Container image vulnerability scanning |
-| Docker | Container image building and execution |
+| Docker | Container image building and service execution |
+| Docker Compose | Running the exporter, Prometheus, and Grafana together |
 | Jenkins | CI/CD pipeline automation |
-| GitHub Actions | Automated repository workflow |
-| PyYAML | Configuration file processing |
-| Jinja2 | HTML report generation |
-| Requests | Slack webhook notifications |
-| Git and GitHub | Version control and source-code hosting |
+| GitHub Actions | Repository-based automated scanning |
+| Prometheus | Collecting and querying monitoring metrics |
+| Grafana | Vulnerability dashboard and visualization |
+| Slack Webhooks | Scan notification delivery |
+| Jinja2 | HTML report templating |
+| PyYAML | YAML configuration handling |
+| Git and GitHub | Source control and project hosting |
 
 ## Project Structure
 
@@ -42,8 +107,17 @@ Capstone-vuln-scanner/
 ├── cicd/
 │   └── jenkins/
 │       └── Jenkinsfile
+├── dashboard/
+│   ├── metrics_exporter.py
+│   ├── prometheus.yml
+│   └── grafana_config/
+│       ├── datasources/
+│       │   └── prometheus.yml
+│       └── dashboards/
+│           ├── dashboards.yml
+│           └── json/
+│               └── vuln-scanner.json
 ├── exceptions/
-│   └── whitelist.json
 ├── notifications/
 │   └── notifier.py
 ├── reports/
@@ -51,31 +125,32 @@ Capstone-vuln-scanner/
 ├── scanner/
 │   ├── scan.py
 │   ├── trivy_runner.py
-│   ├── cve_parser.py
 │   └── gate_check.py
 ├── templates/
-│   └── report_template.html
 ├── config.yaml
+├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
-├── test_report.py
 └── README.md
 ```
 
-*Note: The structure above shows the main expected project files. Additional test files and supporting modules may also be present in the repository.*
+*Note: The tree highlights the main project components. Additional files may be present in the repository.*
 
-## Key Features
+## Features
 
-### 1. Automated Vulnerability Scanning
+### 1. Container Image Scanning
 
-- Uses Trivy to scan container images.
-- Collects vulnerability details from scan results.
-- Supports severity-based filtering.
-- Produces machine-readable JSON scan reports.
+Trivy scans container images and produces structured JSON vulnerability data.
+
+Example image used during testing:
+
+```text
+python:3.8
+```
 
 ### 2. Severity Classification
 
-Vulnerabilities are summarized using the following severity levels:
+The scanner tracks vulnerability severities:
 
 - CRITICAL
 - HIGH
@@ -83,293 +158,364 @@ Vulnerabilities are summarized using the following severity levels:
 - LOW
 - UNKNOWN
 
-This classification helps prioritize findings according to their severity.
+The scan results are used by the reporting, security-gate, notification, and monitoring components.
 
 ### 3. Configurable Security Gate
 
-The security gate checks scan results against the configured policy.
+The security gate evaluates scan results according to the project's policy and returns an appropriate exit code:
 
-The project supports configurable severity settings through `config.yaml`.
+| Exit code | Meaning |
+|---|---|
+| `0` | Security gate passed |
+| `1` | Security gate blocked the build |
+| `2` | Error occurred while evaluating the gate |
 
-Example:
-
-```yaml
-severity_threshold: "HIGH,CRITICAL"
-fail_on_severity: "CRITICAL"
-report_format: "html"
-slack_channel: "#security-alerts"
-rescan_interval_days: 7
-whitelist_path: "exceptions/whitelist.json"
-```
-
-The scanner and gate use their respective configuration settings. A build can be blocked when findings meet the configured failure criteria.
+The current configuration blocks a build when CRITICAL vulnerabilities are detected.
 
 ### 4. HTML Vulnerability Reports
 
-The reporting module uses Python and Jinja2 to generate an HTML report containing:
+The report generator creates an HTML report with summary cards, severity information, and vulnerability details.
 
-- Vulnerability summary
-- Severity-based counts
-- Detailed vulnerability information
-- CVE identifiers and package information
-
-The report provides a convenient way to review scan findings.
+Reports make it easier to inspect scan findings and communicate security risks.
 
 ### 5. Slack Notifications
 
-The notification module sends Slack messages through an incoming webhook.
+The notification module sends scan-related information to Slack through a configured webhook.
 
-Notifications can be used to alert developers when a scan or security gate requires attention.
+Webhook URLs should be stored in environment variables or CI/CD credentials, not committed to GitHub.
 
-Configure the webhook using an environment variable named `SLACK_WEBHOOK_URL`. Do not commit the webhook URL or other secrets to GitHub.
+### 6. Prometheus Metrics
 
-### 6. Jenkins CI/CD Integration
+The metrics exporter reads JSON scan reports and exposes metrics on port `8000`.
 
-The Jenkins pipeline is defined in:
+Metrics include:
 
-`cicd/jenkins/Jenkinsfile`
+| Metric | Description |
+|---|---|
+| `vuln_scanner_vulnerabilities_total` | Vulnerability counts by image and severity |
+| `vuln_scanner_scans_total` | Scan status by image, including blocked and passed |
+| `vuln_scanner_last_scan_timestamp_seconds` | Timestamp associated with the loaded scan report |
+| `vuln_scanner_reports_loaded` | Number of valid reports loaded by the exporter |
 
-The pipeline includes:
+The exporter refreshes its metrics periodically, using a default polling interval of 15 seconds.
 
-1. Checkout source code from GitHub.
-2. Create a Python virtual environment.
-3. Install Python dependencies.
-4. Install Trivy if necessary.
-5. Build the scanner Docker image.
-6. Run the container image vulnerability scan.
-7. Evaluate scan results using the security gate.
-8. Archive the scan result.
-9. Send a Slack notification on failure.
+### 7. Grafana Dashboard
 
-The security gate can intentionally mark a build as failed when critical vulnerabilities are detected.
+The provisioned dashboard includes:
 
-### 7. GitHub Actions Integration
+- Vulnerabilities by severity.
+- Blocked scan status.
+- Current vulnerability counts.
+- Image and severity filters.
 
-The workflow is defined in:
-
-`.github/workflows/scan.yml`
-
-The workflow automates dependency installation, Trivy setup, scanner image building, vulnerability scanning, security gate validation, and scan-result artifact upload.
-
-The workflow can be triggered by configured repository events, scheduled runs, and manual execution where enabled in the workflow file.
+The dashboard uses Prometheus as its data source.
 
 ## Prerequisites
 
-Install the following tools before running the project locally:
+Install or configure the following tools:
 
-- Python 3.11 or a compatible supported Python version
-- Docker Desktop or Docker Engine
-- Trivy
-- Git
-- A Slack workspace and incoming webhook, if Slack notifications are required
+- Python 3.11 or a compatible Python version.
+- Docker Desktop with Docker Compose.
+- Trivy.
+- Git.
+- A Slack webhook if Slack notifications are required.
+- Jenkins if you want to run the Jenkins pipeline.
 
-Jenkins is required to run the Jenkins pipeline.
+The monitoring stack runs in Docker containers.
 
-## Local Setup
+## Setup and Installation
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
-```bash
+```powershell
 git clone https://github.com/Sneha-Tandle916/Capstone-vuln-scanner.git
 cd Capstone-vuln-scanner
 ```
 
-### 2. Create a Python Virtual Environment
+### 2. Create and activate a Python virtual environment
 
-**Windows PowerShell:**
+On Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-**Linux or macOS:**
+If PowerShell blocks activation, use the Python executable directly instead:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
+```powershell
+.\.venv\Scripts\python.exe --version
 ```
 
-### 3. Install Dependencies
+### 3. Install dependencies
 
-```bash
-python -m pip install --upgrade pip
+```powershell
 python -m pip install -r requirements.txt
 ```
 
-### 4. Configure the Project
+### 4. Install and verify Trivy
 
-Review `config.yaml` and adjust the severity threshold and gate policy according to your requirements.
+Ensure Trivy is installed and available on your PATH.
 
-Make sure Trivy is installed and available on your system's PATH.
+```powershell
+trivy --version
+```
 
-## Running a Vulnerability Scan
+## Run a Vulnerability Scan
 
 Run the scanner against a container image:
 
-```bash
-python -m scanner.scan python:3.8 --output-json test_result.json
+```powershell
+python -m scanner.scan python:3.8 --output-json scan_result.json
 ```
 
-This command creates a JSON scan result when the scan completes successfully.
+The scan output is written to `scan_result.json`.
 
-For demonstrations, use an image and tag appropriate for your security policy. The `python:3.8` image used during testing may contain known vulnerabilities and should not automatically be considered suitable for production.
+**Note:** The exact command-line options depend on the current scanner implementation. Use `python -m scanner.scan --help` to inspect the available arguments.
 
-## Running the Security Gate
+## Security Gate
 
-Evaluate a generated scan report:
-
-```bash
-python scanner/gate_check.py test_result.json
-```
-
-The gate uses the project's configured severity policy.
-
-The scanner's findings determine whether the gate passes or blocks the build. A nonzero exit code can be used by CI/CD systems to stop the pipeline.
-
-## Generating an HTML Report
-
-Use the report-generation module or the project's report test script:
-
-```bash
-python test_report.py
-```
-
-The test script generates the HTML report at the path configured by the script, such as:
-
-`reports/sprint3_test_report.html`
-
-Open the generated HTML file in a web browser to review the report.
-
-## Configuring Slack Notifications
-
-Set your Slack incoming webhook URL as an environment variable.
-
-**Windows PowerShell:**
+Evaluate a scan result with the security gate:
 
 ```powershell
-$env:SLACK_WEBHOOK_URL = "YOUR_SLACK_WEBHOOK_URL"
+python scanner/gate_check.py --help
 ```
 
-**Linux or macOS:**
+Use the supported arguments shown by the help output to evaluate the scan result.
 
-```bash
-export SLACK_WEBHOOK_URL="YOUR_SLACK_WEBHOOK_URL"
+A blocked result is an intentional security-policy outcome when findings exceed the configured threshold. It should not automatically be treated as a scanner malfunction.
+
+## Generate HTML Reports
+
+The report generator is located at:
+
+```text
+reports/report_gen.py
 ```
 
-Replace the placeholder locally with your own webhook URL. Never publish the real URL in source code, screenshots, documentation, or commits.
+The project uses Jinja2 templates to create an HTML report with vulnerability summaries and detailed findings.
 
-Send a notification for an existing scan result:
+For the exact report-generation command, refer to the current CLI help or the test script in the repository.
 
-```bash
-python notifications/notifier.py test_result.json --channel slack
+## Slack Notifications
+
+The notification module is located at:
+
+```text
+notifications/notifier.py
 ```
 
-The webhook must be configured before running the notification command.
+The CLI supports selecting a notification channel.
 
-For Jenkins, configure the webhook as a Jenkins Secret text credential with ID:
+Example:
 
-`slack-webhook-url`
-
-The Jenkinsfile references this credential without embedding the secret in the repository.
-
-## Docker
-
-Build the scanner image from the repository root:
-
-```bash
-docker build -t vuln-scanner:local .
+```powershell
+python notifications/notifier.py --help
 ```
 
-The image can then be used according to the command and entrypoint configured in the project's Dockerfile.
+To send a notification using a scan-result file, use the supported command syntax:
+
+```powershell
+python notifications/notifier.py scan_result.json --channel slack
+```
+
+The Slack webhook must be configured before sending notifications. In Jenkins, store the webhook as a credential and expose it to the pipeline securely.
+
+Never place a real webhook URL or secret directly in this README.
+
+## Prometheus and Grafana Monitoring
+
+Sprint 4 integrates the scanner with a Prometheus and Grafana monitoring stack.
+
+### 1. Ensure scan data is available
+
+The Docker Compose configuration mounts the local `scan_results/` directory into the exporter container as `/data`.
+
+Place a valid Trivy JSON report in the local `scan_results/` directory before starting the stack. For example:
+
+```text
+scan_results/
+└── python_3.8.json
+```
+
+The directory is intentionally excluded from Git because scan reports can be large and may contain generated data.
+
+### 2. Build and start the services
+
+Run from the project root:
+
+```powershell
+docker compose build
+docker compose up -d
+```
+
+### 3. Check the services
+
+```powershell
+docker compose ps
+```
+
+View exporter logs:
+
+```powershell
+docker compose logs --tail 50 vuln-scanner
+```
+
+View Prometheus logs:
+
+```powershell
+docker compose logs --tail 50 prometheus
+```
+
+View Grafana logs:
+
+```powershell
+docker compose logs --tail 50 grafana
+```
+
+### 4. Open the monitoring interfaces
+
+| Service | URL |
+|---|---|
+| Metrics exporter | http://localhost:8000/metrics |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 |
+
+The Grafana dashboard is provisioned automatically from the JSON file in `dashboard/grafana_config/dashboards/json/`.
+
+The local Grafana administrator password is configured through the Docker Compose environment. The current development configuration uses `admin`; change it before exposing the service to other users or networks.
+
+### 5. Verify Prometheus metrics
+
+Open the Prometheus web interface and execute:
+
+```promql
+vuln_scanner_vulnerabilities_total
+```
+
+To aggregate vulnerability counts by severity:
+
+```promql
+sum by (severity) (
+  vuln_scanner_vulnerabilities_total
+)
+```
+
+The results should correspond to the scan reports currently loaded by the exporter.
+
+### 6. View Grafana
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+Sign in using the configured local credentials and open the **Vulnerability Scanner Dashboard**.
+
+The dashboard provides vulnerability visualizations and scan-status information.
+
+### 7. Stop the monitoring stack
+
+```powershell
+docker compose down
+```
+
+To stop the services and retain their named data volumes, do not add the `-v` option.
+
+## Jenkins CI/CD Pipeline
+
+The project includes a Jenkins pipeline that automates key vulnerability-scanning tasks.
+
+The pipeline stages include:
+
+1. Checkout source code from GitHub.
+2. Install Python dependencies.
+3. Install or verify Trivy.
+4. Build the scanner Docker image.
+5. Run the vulnerability scan.
+6. Archive available build artifacts.
+7. Send Slack notifications.
+8. Evaluate the security gate.
+
+A build can be marked as failed when the security gate detects CRITICAL vulnerabilities. This is expected under the current policy, even if the scan, report generation, and Slack notification steps have succeeded.
 
 ## GitHub Actions
 
-To review workflow execution:
+The workflow is located at:
 
-1. Open the repository on GitHub.
-2. Select the **Actions** tab.
-3. Open the **Security Scan** workflow.
-4. Select a workflow run.
-5. Review the scan, security gate, and artifact-upload steps.
-6. Download the scan-result artifact when available.
+```text
+.github/workflows/scan.yml
+```
 
-The workflow has been tested successfully, including a run in which the security gate reported:
+The configured workflow supports repository push and pull-request events, scheduled scanning, and manual execution.
 
-`GATE PASSED — no CRITICAL+ vulnerabilities`
+Review the GitHub Actions tab in the repository to inspect individual workflow runs and their logs.
 
-This result applies to that particular scan and policy; it does not guarantee that every image or future scan will be vulnerability-free.
+## Latest Scan Results
 
-## Jenkins
+The latest scan report used for Sprint 4 monitoring contains the following results for `python:3.8`:
 
-The Jenkins pipeline is stored in:
+| Severity | Count |
+|---|---:|
+| CRITICAL | 238 |
+| HIGH | 2,540 |
+| MEDIUM | 0 |
+| LOW | 0 |
+| UNKNOWN | 0 |
+| **Total** | **2,778** |
 
-`cicd/jenkins/Jenkinsfile`
+### Interpretation
 
-The configured Jenkins job checks out the repository and runs the scanning pipeline.
+- The exporter successfully loaded one valid scan report.
+- Prometheus successfully collected the vulnerability metrics.
+- Grafana displayed the severity counts and blocked scan status.
+- The security gate blocked the build because CRITICAL vulnerabilities were present.
 
-To review a run:
+These figures represent the specific scan report used during project validation. Results may change when the image or vulnerability database is updated.
 
-1. Open the Jenkins dashboard.
-2. Select `Capstone-Vulnerability-Scanner`.
-3. Open the relevant build.
-4. Select **Console Output** to review execution details.
-5. Open the build's archived `scan_result.json` artifact when available.
+## Troubleshooting
 
-A build marked `FAILURE` because of a security-gate violation can indicate that the policy is working as designed.
+### Grafana shows no data
 
-## Testing and Verification
+1. Confirm that the exporter container is running.
+2. Open `http://localhost:8000/metrics`.
+3. Confirm that the expected metrics are present.
+4. Open Prometheus and check the `vuln_scanner_vulnerabilities_total` query.
+5. Verify the Grafana Prometheus data source URL is `http://prometheus:9090`.
+6. Confirm the dashboard queries and image filter match the loaded report.
 
-The following capabilities have been exercised during project development:
+### The exporter loads no reports
 
-- Trivy image scanning
-- Python dependency installation
-- Severity-based security gate evaluation
-- HTML report generation
-- Slack webhook notification delivery
-- Jenkins pipeline execution
-- Jenkins scan-result artifact archiving
-- GitHub Actions workflow execution
-- Successful security gate validation after updating a vulnerable dependency
+1. Confirm that `scan_results/` exists.
+2. Ensure the directory contains valid Trivy JSON files.
+3. Check that the directory is mounted to `/data` in Docker Compose.
+4. Inspect the exporter logs.
 
-## Security Considerations
+### The Jenkins build is blocked
 
-- Keep webhook URLs and other credentials out of source control.
-- Use patched base images and dependencies.
-- Review critical and high-severity findings before deployment.
-- Keep security gate policies enabled.
-- Verify scan reports before approving container images.
-- Review exceptions and whitelists regularly.
-- Re-run scans periodically because vulnerability databases and image contents change.
+Inspect the security-gate output to identify the severities causing the failure. Under the current policy, CRITICAL findings block the build. Review and remediate vulnerabilities where possible instead of bypassing the gate simply to obtain a successful build.
 
-## Sprint 3 Deliverables
+### Slack notifications fail
 
-Sprint 3 focused on enhancing the scanner with reporting, notifications, and CI/CD integration.
-
-The implemented deliverables include:
-
-- HTML vulnerability report generation using Jinja2
-- Slack notification integration
-- Jenkins pipeline automation
-- Security gate execution in CI/CD
-- Scan-result artifact archiving
-- GitHub Actions workflow validation
-- Dependency remediation and security-gate revalidation
+Verify the Jenkins credential, webhook configuration, and network connectivity. Do not print or commit the webhook secret in logs or source files.
 
 ## Future Improvements
 
-- Add richer report filtering and sorting.
-- Publish reports as HTML artifacts in CI/CD.
-- Improve handling of scan errors and unavailable results.
-- Add automated dependency updates and scheduled remediation checks.
-- Introduce more extensive automated tests.
-- Integrate additional notification channels where supported.
-- Evaluate newer, supported base-image versions and enforce image-update policies.
+- Add automated remediation guidance for vulnerable packages.
+- Track scan history and trends over time.
+- Add alerting rules for new CRITICAL vulnerabilities.
+- Add report retention and cleanup policies.
+- Improve dashboard filtering and historical visualizations.
+- Add tests for exporter metrics and security-gate edge cases.
+- Evaluate image updates and dependency upgrades to reduce vulnerability findings.
+
+## Repository
+
+GitHub: https://github.com/Sneha-Tandle916/Capstone-vuln-scanner
 
 ## Conclusion
 
-The Capstone Vulnerability Scanner demonstrates how container image vulnerability scanning can be integrated into a CI/CD workflow using Trivy, Python, Docker, Jenkins, and GitHub Actions.
+This capstone demonstrates a practical DevSecOps workflow combining container vulnerability scanning, security-gate enforcement, HTML reporting, Slack notifications, CI/CD automation, and Prometheus–Grafana monitoring.
 
-By combining automated scanning, severity-based security gates, HTML reports, Slack notifications, and artifact archiving, the project provides a foundation for identifying and managing container security risks during software delivery.
-
- 
+The monitoring integration was validated against a Trivy scan report, and the Sprint 4 implementation was committed and pushed to GitHub.
