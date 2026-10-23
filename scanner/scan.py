@@ -1,13 +1,17 @@
+
 import argparse
 import json
+import logging
+import time
+from functools import wraps
+
 import yaml
 
 from scanner.trivy_runner import scan_image
 from scanner.cve_parser import extract_vulnerabilities
 
 
-import time
-from functools import wraps
+logger = logging.getLogger(__name__)
 
 
 def retry(max_attempts=3, delay=5):
@@ -19,13 +23,15 @@ def retry(max_attempts=3, delay=5):
             for attempt in range(1, max_attempts + 1):
                 try:
                     return func(*args, **kwargs)
-                except Exception as e:
+                except Exception as exc:
                     if attempt == max_attempts:
                         raise
 
-                    print(
-                        f"Attempt {attempt} failed: {e}. "
-                        f"Retrying in {delay} seconds..."
+                    logger.warning(
+                        "Attempt %s failed: %s. Retrying in %s seconds...",
+                        attempt,
+                        exc,
+                        delay,
                     )
                     time.sleep(delay)
 
@@ -34,27 +40,20 @@ def retry(max_attempts=3, delay=5):
     return decorator
 
 
-@retry(max_attempts=3, delay=5)
-def run_scan_with_retry(image_name, config, quiet=False):
-    return run_scan(image_name, config, quiet=quiet)
-
-
-
 def load_config(path="config.yaml"):
-    """
-    Load configuration from config.yaml.
-    """
+    """Load configuration from config.yaml."""
 
-    with open(path, "r") as file:
+    with open(path, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
 
-    return config
+    return config or {}
 
 
 def run_scan(image_name: str, severity: str = None):
     """
     Run a vulnerability scan on the given Docker image.
-    Returns both the raw Trivy JSON and parsed vulnerabilities.
+
+    Returns the raw Trivy JSON and parsed vulnerabilities.
     """
 
     config = load_config()
@@ -62,12 +61,12 @@ def run_scan(image_name: str, severity: str = None):
     if severity is None:
         severity = config.get(
             "severity_threshold",
-            "HIGH,CRITICAL"
+            "HIGH,CRITICAL",
         )
 
     scan_result = scan_image(
         image_name,
-        severity=severity
+        severity=severity,
     )
 
     vulnerabilities = extract_vulnerabilities(scan_result)
@@ -75,10 +74,30 @@ def run_scan(image_name: str, severity: str = None):
     return scan_result, vulnerabilities
 
 
+@retry(max_attempts=3, delay=5)
+def run_scan_with_retry(image_name, config, severity=None, quiet=False):
+    """Run the scan with retries and the requested severity filter."""
+
+    selected_severity = severity or config.get(
+        "severity_threshold",
+        "HIGH,CRITICAL",
+    )
+
+    if not quiet:
+        logger.info(
+            "Starting scan for %s with severity filter: %s",
+            image_name,
+            selected_severity,
+        )
+
+    return run_scan(
+        image_name,
+        severity=selected_severity,
+    )
+
+
 def summarize_vulnerabilities(vulnerabilities: list):
-    """
-    Count vulnerabilities by severity.
-    """
+    """Count vulnerabilities by severity."""
 
     summary = {
         "CRITICAL": 0,
@@ -89,8 +108,7 @@ def summarize_vulnerabilities(vulnerabilities: list):
     }
 
     for vuln in vulnerabilities:
-
-        severity = vuln.get("severity", "UNKNOWN")
+        severity = vuln.get("severity", "UNKNOWN").upper()
 
         if severity in summary:
             summary[severity] += 1
@@ -101,9 +119,7 @@ def summarize_vulnerabilities(vulnerabilities: list):
 
 
 def save_json_report(scan_result: dict, filename: str):
-    """
-    Save the raw Trivy JSON report.
-    """
+    """Save the raw Trivy JSON report."""
 
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(scan_result, file, indent=4)
@@ -112,9 +128,7 @@ def save_json_report(scan_result: dict, filename: str):
 
 
 def main():
-    """
-    Command-line entry point.
-    """
+    """Command-line entry point."""
 
     parser = argparse.ArgumentParser(
         description="Docker Image Vulnerability Scanner"
@@ -122,23 +136,35 @@ def main():
 
     parser.add_argument(
         "image",
-        help="Docker image to scan"
+        help="Docker image to scan",
     )
 
     parser.add_argument(
         "--severity",
         default=None,
-        help="Severity levels (Example: HIGH,CRITICAL)"
+        help="Severity levels, for example HIGH,CRITICAL",
     )
 
     parser.add_argument(
         "--output-json",
-        help="Save raw Trivy JSON report"
+        help="Save raw Trivy JSON report",
+    )
+
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Reduce scanner log output",
     )
 
     args = parser.parse_args()
+    config = load_config()
 
-    result = run_scan_with_retry(args.image, config, quiet=args.quiet)
+    scan_result, vulnerabilities = run_scan_with_retry(
+        args.image,
+        config,
+        severity=args.severity,
+        quiet=args.quiet,
+    )
 
     summary = summarize_vulnerabilities(vulnerabilities)
 
@@ -153,10 +179,7 @@ def main():
         print(f"{severity:10}: {count}")
 
     if args.output_json:
-        save_json_report(
-            scan_result,
-            args.output_json
-        )
+        save_json_report(scan_result, args.output_json)
 
 
 if __name__ == "__main__":

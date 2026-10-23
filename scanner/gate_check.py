@@ -2,7 +2,7 @@ import argparse
 import json
 import sys
 import yaml
-from exceptions import load_whitelist, apply_exceptions
+from scanner.exceptions import load_whitelist, apply_exceptions
 
 
 SEVERITY_ORDER = [
@@ -72,11 +72,11 @@ def format_vuln_table(failing):
     print("Blocking vulnerabilities:")
 
     for vulnerability in failing:
-        vuln_id = vulnerability.get("VulnerabilityID", "N/A")
-        severity = vulnerability.get("Severity", "UNKNOWN")
-        package = vulnerability.get("PkgName", "N/A")
-        installed = vulnerability.get("InstalledVersion", "N/A")
-        fixed = vulnerability.get("FixedVersion", "N/A")
+        vuln_id = vulnerability.get("cve_id", "N/A")
+        severity = vulnerability.get("severity", "UNKNOWN")
+        package = vulnerability.get("package", "N/A")
+        installed = vulnerability.get("installed_version", "N/A")
+        fixed = vulnerability.get("fixed_version", "N/A")
 
         print(
             f"- {vuln_id} | {severity} | "
@@ -89,8 +89,19 @@ def check_gate(result_path: str, config_path: str = "config.yaml"):
     result = load_result(result_path)
     threshold = load_threshold(config_path)
     blocked = derive_blocked_severities(threshold)
-    image = result.get("image", "unknown image")
-    vulns = result.get("vulnerabilities", [])
+    image = result.get("ArtifactName", result.get("image", "unknown image"))
+    raw_vulns = get_vulnerabilities(result)
+
+    vulns = [
+        {
+            "cve_id": v.get("VulnerabilityID", ""),
+            "severity": v.get("Severity", "UNKNOWN"),
+            "package": v.get("PkgName", "N/A"),
+            "installed_version": v.get("InstalledVersion", "N/A"),
+            "fixed_version": v.get("FixedVersion", "N/A"),
+        }
+        for v in raw_vulns
+]
 
     # Read the whitelist path from config.yaml.
     whitelist_path = "exceptions/whitelist.json"
@@ -138,7 +149,7 @@ def check_gate(result_path: str, config_path: str = "config.yaml"):
             f"BUILD BLOCKED - {len(failing)} "
             f"{threshold}+ active findings:\n"
         )
-        print(format_vuln_table(failing))
+        format_vuln_table(failing)
         sys.exit(1)
 
     print(f"GATE PASSED - no active {threshold}+ findings in {image}")
