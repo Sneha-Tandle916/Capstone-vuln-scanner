@@ -225,6 +225,8 @@ The monitoring stack runs in Docker containers.
 
 ## Setup and Installation
 
+- [Sprint 6 Deployment and Acceptance Testing](#sprint-6-deployment-and-acceptance-testing)
+
 ### 1. Clone the repository
 
 ```powershell
@@ -499,6 +501,91 @@ Inspect the security-gate output to identify the severities causing the failure.
 ### Slack notifications fail
 
 Verify the Jenkins credential, webhook configuration, and network connectivity. Do not print or commit the webhook secret in logs or source files.
+
+## Sprint 6 Deployment and Acceptance Testing
+
+Sprint 6 adds a deployment script and validates the monitoring stack and existing automated tests.
+
+### Deployment Script
+
+The `deploy.sh` script automates the following tasks in a compatible Ubuntu/WSL environment:
+
+- Checks required project files and tools.
+- Creates a dedicated Python virtual environment outside the repository.
+- Installs Python dependencies from `requirements.txt`.
+- Validates `config.yaml` and severity settings.
+- Checks for Trivy and installs it if necessary.
+- Creates the `scan_results/` directory.
+- Builds and starts the scanner metrics exporter, Prometheus, and Grafana using Docker Compose.
+
+### Run the Deployment
+
+From the project root in Ubuntu/WSL:
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The script requires Docker Desktop integration with the WSL distribution and may require `sudo` when installing Trivy.
+
+### Verify Deployment
+
+Check service status:
+
+```bash
+docker compose ps
+```
+
+Check the metrics exporter:
+
+```bash
+curl -sS -o /dev/null -w 'Metrics HTTP %{http_code}\n' http://localhost:8000/metrics
+```
+
+Check Prometheus:
+
+```bash
+curl -sS -o /dev/null -w 'Prometheus HTTP %{http_code}\n' http://localhost:9090/-/healthy
+```
+
+Check Grafana:
+
+```bash
+curl -sS -o /dev/null -w 'Grafana HTTP %{http_code}\n' http://localhost:3000/api/health
+```
+
+The validated local deployment returned HTTP 200 for all three endpoints.
+
+### Automated Acceptance Tests
+
+Run the existing automated tests from the project root in PowerShell:
+
+```powershell
+python -m pytest -v tests
+```
+
+**Validated result:** 9 tests passed. The tests cover vulnerability severity summaries, configuration settings, security-gate pass/block behavior, and whitelist exception expiry handling.
+
+### Service URLs
+
+| Service | URL |
+|---|---|
+| Metrics exporter | http://localhost:8000/metrics |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 |
+
+### Stop the Monitoring Stack
+
+```bash
+docker compose down
+```
+
+This stops the services while retaining named Docker volumes.
+
+### Acceptance-Test Scope
+
+The local monitoring deployment and existing automated tests have been validated. GitHub Actions and Jenkins are separate CI/CD validation paths. A fresh-clone clean-room test must also be completed before claiming that the entire Sprint 6 acceptance process is finished.
 
 ## Future Improvements
 
