@@ -597,6 +597,31 @@ The local monitoring deployment and existing automated tests have been validated
 - Add tests for exporter metrics and security-gate edge cases.
 - Evaluate image updates and dependency upgrades to reduce vulnerability findings.
 
+## 📸 Sprint-wise Screenshot Evidence
+
+This section contains screenshots documenting the implementation, testing, deployment, and monitoring activities completed during the development of the Container Image Vulnerability Scanner capstone project.
+
+### Sprint 1 — Project Setup and Initial Implementation
+[View Sprint 1 Screenshots](screenshots/Sprint-1/)
+
+### Sprint 2 — Vulnerability Scanning
+[View Sprint 2 Screenshots](screenshots/Sprint-2/)
+
+### Sprint 3 — Reporting, Security Gate, and Notifications
+[View Sprint 3 Screenshots](screenshots/Sprint-3/)
+
+### Sprint 4 — Monitoring and Observability
+[View Sprint 4 Screenshots](screenshots/Sprint-4/)
+
+### Sprint 5 — CI/CD Automation
+[View Sprint 5 Screenshots](screenshots/Sprint-5/)
+
+### Sprint 6 — Deployment and Documentation
+[View Sprint 6 Screenshots](screenshots/Sprint-6/)
+
+**Total evidence:** 34 screenshots organized across six sprint folders.
+
+These screenshots provide visual evidence of the project's progress and help reviewers navigate the work completed in each sprint.
 
 ## Conclusion
 
