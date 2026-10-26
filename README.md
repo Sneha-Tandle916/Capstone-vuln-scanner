@@ -597,9 +597,6 @@ The local monitoring deployment and existing automated tests have been validated
 - Add tests for exporter metrics and security-gate edge cases.
 - Evaluate image updates and dependency upgrades to reduce vulnerability findings.
 
-## Repository
-
-GitHub: https://github.com/Sneha-Tandle916/Capstone-vuln-scanner
 
 ## Conclusion
 
