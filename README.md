@@ -580,7 +580,6 @@ python -m pytest -v tests
 ```bash
 docker compose down
 ```
-
 This stops the services while retaining named Docker volumes.
 
 ### Acceptance-Test Scope
@@ -619,7 +618,6 @@ This section contains screenshots documenting the implementation, testing, deplo
 ### Sprint 6 — Deployment and Documentation
 [View Sprint 6 Screenshots](screenshots/Sprint-6/)
 
-**Total evidence:** 34 screenshots organized across six sprint folders.
 
 These screenshots provide visual evidence of the project's progress and help reviewers navigate the work completed in each sprint.
 
